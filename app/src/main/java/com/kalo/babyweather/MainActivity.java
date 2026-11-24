@@ -25,7 +25,8 @@ public class MainActivity extends Activity {
     private TextView weatherView, adviceView, statusView, detailView;
     private Spinner citySpinner;
     private Button refreshBtn;
-    private BabyView babyView;
+    private ImageView photoView;
+    private int currentBand = 3;
     private LinearLayout shopLayout;
     private Outfit currentOutfit;
     private ExecutorServiceHolder execHolder = new ExecutorServiceHolder();
@@ -85,12 +86,14 @@ public class MainActivity extends Activity {
 
         // ---- visual baby ----
         TextView vh = new TextView(this); vh.setText("\n今日造型（穿在宝宝身上就是这样）"); vh.setTextSize(18); vh.setTextColor(Color.parseColor("#E67E22")); root.addView(vh);
-        babyView = new BabyView(this);
-        babyView.setBackgroundColor(Color.WHITE);
-        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(-1, 980); vp.setMargins(0,8,0,4); babyView.setLayoutParams(vp);
-        root.addView(babyView);
-        TextView hint = new TextView(this); hint.setText("👆 点一下宝宝图可以放大，放大后双指捏合缩放、拖动看细节"); hint.setTextSize(13); hint.setTextColor(Color.parseColor("#888888")); hint.setGravity(Gravity.CENTER); root.addView(hint);
-        babyView.setOnClickListener(v -> showZoom());
+        photoView = new ImageView(this);
+        photoView.setBackgroundColor(Color.WHITE);
+        photoView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        photoView.setAdjustViewBounds(true);
+        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(-1, 1100); vp.setMargins(0,8,0,4); photoView.setLayoutParams(vp);
+        root.addView(photoView);
+        TextView hint = new TextView(this); hint.setText("👆 点一下照片可以放大，放大后双指捏合缩放、拖动看细节（写实模特图）"); hint.setTextSize(13); hint.setTextColor(Color.parseColor("#888888")); hint.setGravity(Gravity.CENTER); root.addView(hint);
+        photoView.setOnClickListener(v -> showZoom());
 
         detailView = makeCard(root, "每一件具体是什么（照着买/照着穿）");
         adviceView = makeCard(root, "穿衣建议与提醒");
@@ -126,7 +129,7 @@ public class MainActivity extends Activity {
         Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         LinearLayout lay = new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setBackgroundColor(Color.WHITE); lay.setPadding(24,32,24,24);
         TextView h = new TextView(this); h.setText("今日造型放大图 — 双指缩放 / 拖动"); h.setTextSize(17); h.setGravity(Gravity.CENTER); lay.addView(h);
-        BabyView big = new BabyView(this); big.zoomable = true; big.setOutfit(currentOutfit); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
+        TouchImageView big = new TouchImageView(this); big.setImageBitmap(loadBandBitmap(currentBand)); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
         lay.addView(big, new LinearLayout.LayoutParams(-1, 0, 1f));
         TextView det = new TextView(this); det.setText(detailText(currentOutfit)); det.setTextSize(15); det.setPadding(16,16,16,16); lay.addView(det);
         Button close = new Button(this); close.setText("关闭"); close.setOnClickListener(v -> d.dismiss()); lay.addView(close);
@@ -187,22 +190,38 @@ public class MainActivity extends Activity {
             o.items.add(new Item("下装","加绒外裤+保暖裤，120码 — 图上这条","儿童加绒外裤 120码"));
             o.items.add(new Item("鞋帽手套","雪地靴约29码 + 针织帽 + 围巾 + 手套全套 — 图上这套","儿童雪地靴 手套 围巾 套装"));
         }
+        o.items.add(0, underwearFor(o.band));
         if (rainy) o.items.add(new Item("雨具","儿童雨衣（书包位款）+ 雨伞，或雨靴一双，今天有雨必带","儿童雨衣 书包位 雨靴"));
         if (wind >= 30) o.items.add(new Item("防风","风大：外套拉链拉到顶，帽子戴紧，别穿宽松灌风款","儿童防风外套 120码"));
         return o;
     }
 
+    private Item underwearFor(int band) {
+        switch (band) {
+            case 0: return new Item("内衣 · 第1层（最里层）","白色网眼薄棉小背心，120码，纯棉薄款，贴身吸汗；配浅色纯棉平角内裤一条 — 所有衣服都穿在它外面，领口露出的白边就是它","儿童背心 纯棉 内裤 120码 薄款");
+            case 1: return new Item("内衣 · 第1层（最里层）","白色/浅色纯棉小背心，120码，薄款；配纯棉平角内裤一条 — 贴身层，短袖T恤穿在它外面","儿童纯棉背心 内裤套装 120码");
+            case 2: return new Item("内衣 · 第1层（最里层）","纯棉薄打底衫/小背心，120码，圆领薄款；配纯棉平角内裤一条 — 长袖T恤穿在它外面","儿童纯棉打底衫 薄款 120码");
+            case 3: return new Item("内衣 · 第1层（最里层）","纯棉秋衣，120码，薄款圆领打底；配纯棉内裤一条，秋裤/打底裤穿在长裤里面 — 卫衣穿在秋衣外面","儿童纯棉秋衣秋裤 120码 薄款");
+            case 4: return new Item("内衣 · 第1层（最里层）","纯棉秋衣秋裤套装，120码，中厚款；秋裤是下装的第一层，外面再穿加绒长裤 — 毛衣穿在秋衣外面","儿童秋衣秋裤套装 120码 中厚");
+            case 5: return new Item("内衣 · 第1层（最里层）","德绒保暖内衣套装（秋衣+秋裤），120码，自发热/德绒面料，贴身不扎 — 羽绒服里面的毛衣再穿在它外面","儿童德绒保暖内衣套装 120码");
+            default: return new Item("内衣 · 第1层（最里层）","加绒/加厚保暖内衣套装（秋衣+秋裤），120码，最贴身一层 — 外面依次是毛衣、厚羽绒服、加绒外裤","儿童加绒保暖内衣套装 120码");
+        }
+    }
+
     private String detailText(Outfit o) {
         StringBuilder s = new StringBuilder();
         s.append("造型：").append(o.summary).append("\n");
-        s.append("尺码参考：120码 / 鞋约28–29码（按孩子实际身高脚长）\n\n");
-        for (Item it : o.items) s.append("• ").append(it.label).append("：").append(it.spec).append("\n\n");
+        s.append("尺码参考：120码 / 鞋约28–29码（按孩子实际身高脚长）\n");
+        s.append("穿的顺序：从里到外，先内衣，再内搭/上衣，再外套。\n\n");
+        int n = 1;
+        for (Item it : o.items) { s.append(n++).append(". ").append(it.label).append("：").append(it.spec).append("\n\n"); }
         return s.toString().trim();
     }
 
     private void applyOutfit(Outfit o) {
         currentOutfit = o;
-        babyView.setOutfit(o);
+        currentBand = o.band;
+        photoView.setImageBitmap(loadBandBitmap(o.band));
         detailView.setText(detailText(o));
         shopLayout.removeAllViews();
         for (Item it : o.items) {
@@ -299,7 +318,32 @@ public class MainActivity extends Activity {
         StringBuilder sb=new StringBuilder(); String line; while((line=r.readLine())!=null) sb.append(line); r.close(); return sb.toString();
     }
 
-    // ---------- cartoon baby view ----------
+    private android.graphics.Bitmap loadBandBitmap(int band) {
+        try {
+            java.io.InputStream is = getAssets().open("band" + band + ".jpg");
+            android.graphics.Bitmap bm = android.graphics.BitmapFactory.decodeStream(is); is.close(); return bm;
+        } catch (Exception e) { return null; }
+    }
+
+    static class TouchImageView extends ImageView {
+        private android.graphics.Matrix matrix = new android.graphics.Matrix();
+        private android.graphics.Matrix saved = new android.graphics.Matrix();
+        private ScaleGestureDetector sgd; private float lastX, lastY; private boolean drag=false;
+        TouchImageView(Context ctx){ super(ctx); setScaleType(ScaleType.MATRIX);
+            sgd = new ScaleGestureDetector(ctx, new ScaleGestureDetector.SimpleOnScaleGestureListener(){
+                @Override public boolean onScale(ScaleGestureDetector d){ matrix.postScale(d.getScaleFactor(), d.getScaleFactor(), d.getFocusX(), d.getFocusY()); setImageMatrix(matrix); return true; } });
+        }
+        @Override protected void onLayout(boolean ch,int l,int t,int r,int b){ super.onLayout(ch,l,t,r,b);
+            if (getDrawable()!=null && matrix.isIdentity()){ float vw=getWidth(), vh=getHeight(), dw=getDrawable().getIntrinsicWidth(), dh=getDrawable().getIntrinsicHeight();
+                float s=Math.min(vw/dw, vh/dh); matrix.setScale(s,s); matrix.postTranslate((vw-dw*s)/2f,(vh-dh*s)/2f); setImageMatrix(matrix); } }
+        @Override public boolean onTouchEvent(MotionEvent e){ sgd.onTouchEvent(e);
+            switch(e.getActionMasked()){ case MotionEvent.ACTION_DOWN: lastX=e.getX(); lastY=e.getY(); drag=true; break;
+                case MotionEvent.ACTION_MOVE: if(drag && e.getPointerCount()==1){ matrix.postTranslate(e.getX()-lastX, e.getY()-lastY); lastX=e.getX(); lastY=e.getY(); setImageMatrix(matrix);} break;
+                case MotionEvent.ACTION_UP: drag=false; break; }
+            return true; }
+    }
+
+    // ---------- cartoon baby view (kept as fallback, not shown) ----------
     static class BabyView extends View {
         Outfit outfit; boolean zoomable=false; float zoom=1f, dx=0f, dy=0f;
         ScaleGestureDetector sgd; float lastX, lastY; boolean dragging=false;
@@ -370,6 +414,8 @@ public class MainActivity extends Activity {
             // hands / gloves
             int handColor = o.gloves ? Color.parseColor("#B03A2E") : skin;
             c.drawCircle(190,492,24,p(handColor)); c.drawCircle(410,492,24,p(handColor));
+            // undershirt collar peeking at neckline (layer 1)
+            c.drawRoundRect(new RectF(252,248,348,282),14,14,p(Color.WHITE));
             // torso
             if (o.hasOuter){
                 c.drawRoundRect(new RectF(205,270,395,540),36,36,p(o.outerColor));

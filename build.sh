@@ -17,7 +17,7 @@ rm -rf build/gen/* build/obj/* build/apk/*
 # 2. resources / manifest
 "$BT/aapt2" compile --dir app/src/main/res -o build/res.zip 2>/dev/null || echo "no res, skip compile"
 if [ -f build/res.zip ]; then RESARG="build/res.zip"; else RESARG=""; fi
-"$BT/aapt2" link -o build/apk/app-unsigned.apk -I "$PLAT" --manifest app/src/main/AndroidManifest.xml --java build/gen $RESARG
+"$BT/aapt2" link -o build/apk/app-unsigned.apk -I "$PLAT" --manifest app/src/main/AndroidManifest.xml --java build/gen -A app/src/main/assets $RESARG
 
 # 3. compile java
 find app/src/main/java build/gen -name "*.java" > build/sources.txt
