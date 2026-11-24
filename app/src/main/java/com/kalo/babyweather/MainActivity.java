@@ -129,7 +129,7 @@ public class MainActivity extends Activity {
         shopLayout = new LinearLayout(this); shopLayout.setOrientation(LinearLayout.VERTICAL); root.addView(shopLayout);
 
         TextView ah = new TextView(this); ah.setText("\n⚙️ AI 模型设置（填一次保存，下次自动带出）"); ah.setTextSize(18); ah.setTextColor(Color.parseColor("#E67E22")); root.addView(ah);
-        TextView an = new TextView(this); an.setText("填 OpenAI 兼容接口：地址如 https://api.deepseek.com/v1 或 https://api.openai.com/v1；模型如 deepseek-chat / gpt-4o-mini。再填绘图模型（如 dall-e-3 / gpt-image-1），AI 推荐就能实时画到小模特身上；注意 DeepSeek 等纯文字接口没有绘图模型可填。Key 只存在本机。"); an.setTextSize(12); an.setTextColor(Color.parseColor("#999999")); root.addView(an);
+        TextView an = new TextView(this); an.setText("填 OpenAI 兼容接口：地址如 https://api.deepseek.com/v1 或 https://api.openai.com/v1；模型如 deepseek-chat / gpt-4o-mini。再填绘图模型（如 dall-e-3 / gpt-image-1），AI 推荐就能实时画到小模特身上；注意 DeepSeek 等纯文字接口没有绘图模型可填。不填绘图模型时，点「获取当日推荐」会跳过 AI，直接随机展示本地备选。Key 只存在本机。"); an.setTextSize(12); an.setTextColor(Color.parseColor("#999999")); root.addView(an);
         android.content.SharedPreferences cfg = getSharedPreferences("ai_cfg", MODE_PRIVATE);
         apiBaseInput = new android.widget.EditText(this); apiBaseInput.setHint("接口地址，如 https://api.deepseek.com/v1"); apiBaseInput.setTextSize(14); apiBaseInput.setSingleLine(true); apiBaseInput.setText(cfg.getString("base", "")); root.addView(apiBaseInput);
         apiKeyInput = new android.widget.EditText(this); apiKeyInput.setHint("API Key"); apiKeyInput.setTextSize(14); apiKeyInput.setSingleLine(true); apiKeyInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); apiKeyInput.setText(cfg.getString("key", "")); root.addView(apiKeyInput);
@@ -335,11 +335,9 @@ public class MainActivity extends Activity {
     }
     private void shuffleOption() {
         if (currentOutfit == null || currentOutfit.options.size() < 2) { Toast.makeText(this, "现在只有一套，没得换", Toast.LENGTH_SHORT).show(); return; }
-        java.util.Random rnd = new java.util.Random();
-        int pick = currentOpt; int guard = 0;
-        while (pick == currentOpt && guard++ < 20) pick = rnd.nextInt(currentOutfit.options.size());
+        int pick = (currentOpt + 1) % currentOutfit.options.size();
         renderOption(pick);
-        Toast.makeText(this, "随机换到：搭配" + (pick + 1) + " " + currentOutfit.options.get(pick).name, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "换到：搭配" + (pick + 1) + " " + currentOutfit.options.get(pick).name, Toast.LENGTH_SHORT).show();
     }
     private void renderOption(int idx) {
         if (currentOutfit == null || currentOutfit.options.isEmpty()) return;
@@ -370,10 +368,55 @@ public class MainActivity extends Activity {
         if (day >= 28) return 0; if (day >= 23) return 1; if (day >= 18) return 2;
         if (day >= 13) return 3; if (day >= 8) return 4; if (day >= 3) return 5; return 6;
     }
+    private void localRandomFlow() {
+        int idx = citySpinner.getSelectedItemPosition();
+        aiBtn.setEnabled(false); statusView.setText("未填绘图模型：跳过 AI，直接取天气随机展示本地备选…");
+        execHolder.e.execute(() -> {
+            try {
+                double lat, lon; String city;
+                if (idx == 0) {
+                    double[] loc = getLocation();
+                    if (loc == null) { lat = 31.23; lon = 121.47; city = "定位失败，暂用上海"; }
+                    else { lat = loc[0]; lon = loc[1]; city = "当前位置"; }
+                } else { lat = cityCoords[idx][0]; lon = cityCoords[idx][1]; city = cityNames[idx]; }
+                String wurl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+                    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m" +
+                    "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,wind_speed_10m_max" +
+                    "&timezone=auto&forecast_days=1";
+                org.json.JSONObject w = new org.json.JSONObject(httpGet(wurl));
+                org.json.JSONObject cur = w.getJSONObject("current");
+                org.json.JSONObject daily = w.getJSONObject("daily");
+                double tmax = daily.getJSONArray("temperature_2m_max").getDouble(0);
+                double tmin = daily.getJSONArray("temperature_2m_min").getDouble(0);
+                double rainP = daily.getJSONArray("precipitation_probability_max").optDouble(0, 0);
+                double uv = daily.getJSONArray("uv_index_max").optDouble(0, 0);
+                double wind = daily.getJSONArray("wind_speed_10m_max").optDouble(0, 0);
+                double now = cur.getDouble("temperature_2m");
+                double feels = cur.getDouble("apparent_temperature");
+                final Outfit outfit = outfitFor(tmax, rainP >= 40, uv, wind, tmin);
+                buildOptions(outfit);
+                final String wtext = city + " · 最高 " + Math.round(tmax) + "°C / 最低 " + Math.round(tmin) + "°C · 现在 " + now + "°C（体感 " + Math.round(feels) + "°C）· 降雨概率 " + Math.round(rainP) + "% · 风最大 " + Math.round(wind) + " km/h · 紫外线 " + uv;
+                runOnUiThread(() -> {
+                    weatherView.setText(wtext);
+                    applyOutfit(outfit);
+                    int pick = new java.util.Random().nextInt(outfit.options.size());
+                    renderOption(pick);
+                    adviceView.setText("绘图模型没填，这次不走 AI 查询和绘图：直接按今天气温从本地备选里随机展示了搭配" + (pick + 1) + "。点照片右上角「换一套」可以在这 " + outfit.options.size() + " 套里一套套循环切换，下面的搭配按钮也能直接选。想用 AI 实时推荐+画图，去页面下方把绘图模型名填上即可。");
+                    statusView.setText("本地备选随机展示 · " + city);
+                    aiBtn.setEnabled(true);
+                });
+            } catch (Exception e) {
+                final String msg = e.getMessage() == null ? e.toString() : e.getMessage();
+                runOnUiThread(() -> { statusView.setText("获取天气失败：" + msg); aiBtn.setEnabled(true); });
+            }
+        });
+    }
     private void fetchAiRecommendation() {
         String base = apiBaseInput.getText().toString().trim();
         String key = apiKeyInput.getText().toString().trim();
         String model = apiModelInput.getText().toString().trim();
+        String imgGate = apiImgModelInput.getText().toString().trim();
+        if (imgGate.isEmpty()) { localRandomFlow(); return; }
         if (base.isEmpty() || key.isEmpty() || model.isEmpty()) {
             Toast.makeText(this, "请先在页面下方「AI 模型设置」里填好接口地址、Key、模型名并保存", Toast.LENGTH_LONG).show();
             return;
@@ -498,7 +541,7 @@ public class MainActivity extends Activity {
                     }
                     int pick = new java.util.Random().nextInt(outfit.options.size());
                     renderOption(pick);
-                    adviceView.setText("AI 推荐是搭配" + outfit.options.size() + "（名字带🤖），加上本地素材库的 " + (outfit.options.size() - 1) + " 套，一共 " + outfit.options.size() + " 套备选。首屏是从中随机挑的一套展示，点照片右上角「🔀 换一套」可以随机换一套，下面的搭配按钮也能逐套看。" + (imgOk[0] ? "AI 那套已经实时画到小模特身上了（点开它的搭配按钮看图）。" : "AI 那套这次用同温度档主图示意（没填绘图模型或绘图失败），穿法以清单为准。") + "注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
+                    adviceView.setText("AI 推荐是搭配" + outfit.options.size() + "（名字带🤖），加上本地素材库的 " + (outfit.options.size() - 1) + " 套，一共 " + outfit.options.size() + " 套备选。首屏是从中随机挑的一套展示，点照片右上角「🔀 换一套」可以在备选里一套套循环切换，下面的搭配按钮也能直接选。" + (imgOk[0] ? "AI 那套已经实时画到小模特身上了（点开它的搭配按钮看图）。" : "AI 那套这次用同温度档主图示意（没填绘图模型或绘图失败），穿法以清单为准。") + "注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
                     statusView.setText("AI 推荐已生成 · " + city);
                     aiBtn.setEnabled(true);
                 });
