@@ -27,6 +27,9 @@ public class MainActivity extends Activity {
     private Button refreshBtn;
     private ImageView photoView;
     private int currentBand = 3;
+    private LinearLayout optLayout;
+    private int currentOpt = 0;
+    private String currentAsset = null;
     private LinearLayout shopLayout;
     private Outfit currentOutfit;
     private ExecutorServiceHolder execHolder = new ExecutorServiceHolder();
@@ -39,6 +42,7 @@ public class MainActivity extends Activity {
 
     // ---------- data ----------
     static class Item { String label, spec, keyword; Item(String l,String s,String k){label=l;spec=s;keyword=k;} }
+    static class Option { String name, asset; java.util.List<Item> items = new java.util.ArrayList<>(); }
     static class Outfit {
         int band, topColor, outerColor, bottomColor, shoeColor;
         int sleeve = 1;      // 0 short, 1 long
@@ -47,6 +51,7 @@ public class MainActivity extends Activity {
         int hat = 0;         // 0 none, 1 sunhat, 2 cap, 3 winter hat
         String summary = "";
         List<Item> items = new ArrayList<>();
+        List<Option> options = new ArrayList<>();
     }
 
     @Override protected void onCreate(Bundle b) {
@@ -94,6 +99,8 @@ public class MainActivity extends Activity {
         root.addView(photoView);
         TextView hint = new TextView(this); hint.setText("👆 点一下照片可以放大，放大后双指捏合缩放、拖动看细节（写实模特图）"); hint.setTextSize(13); hint.setTextColor(Color.parseColor("#888888")); hint.setGravity(Gravity.CENTER); root.addView(hint);
         photoView.setOnClickListener(v -> showZoom());
+        TextView oh = new TextView(this); oh.setText("\n换一套（同温度多套搭配，点着切换）："); oh.setTextSize(15); oh.setTextColor(Color.parseColor("#E67E22")); root.addView(oh);
+        optLayout = new LinearLayout(this); optLayout.setOrientation(LinearLayout.VERTICAL); root.addView(optLayout);
 
         detailView = makeCard(root, "每一件具体是什么（照着买/照着穿）");
         adviceView = makeCard(root, "穿衣建议与提醒");
@@ -129,9 +136,9 @@ public class MainActivity extends Activity {
         Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         LinearLayout lay = new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setBackgroundColor(Color.WHITE); lay.setPadding(24,32,24,24);
         TextView h = new TextView(this); h.setText("今日造型放大图 — 双指缩放 / 拖动"); h.setTextSize(17); h.setGravity(Gravity.CENTER); lay.addView(h);
-        TouchImageView big = new TouchImageView(this); big.setImageBitmap(loadBandBitmap(currentBand)); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
+        TouchImageView big = new TouchImageView(this); big.setImageBitmap(currentAsset != null ? loadAssetBitmap(currentAsset) : loadBandBitmap(currentBand)); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
         lay.addView(big, new LinearLayout.LayoutParams(-1, 0, 1f));
-        TextView det = new TextView(this); det.setText(detailText(currentOutfit)); det.setTextSize(15); det.setPadding(16,16,16,16); lay.addView(det);
+        TextView det = new TextView(this); det.setText(currentOutfit != null && !currentOutfit.options.isEmpty() ? detailFor(currentOutfit, currentOutfit.options.get(currentOpt)) : detailText(currentOutfit)); det.setTextSize(15); det.setPadding(16,16,16,16); lay.addView(det);
         Button close = new Button(this); close.setText("关闭"); close.setOnClickListener(v -> d.dismiss()); lay.addView(close);
         d.setContentView(lay); d.show();
     }
@@ -218,13 +225,95 @@ public class MainActivity extends Activity {
         return s.toString().trim();
     }
 
+    private String detailFor(Outfit o, Option op) {
+        StringBuilder s = new StringBuilder();
+        s.append("这一套：").append(op.name).append("（").append(o.summary).append("）\n");
+        s.append("尺码参考：120码 / 鞋约28–29码（按孩子实际身高脚长）\n");
+        s.append("穿的顺序：从里到外，先内衣，再内搭/上衣，再外套。\n");
+        if (op.asset == null) s.append("注：这一套暂无单独模特图，上方主图是同温度档的搭配1，穿法以清单为准。\n");
+        s.append("\n");
+        int n = 1;
+        for (Item it : op.items) { s.append(n++).append(". ").append(it.label).append("：").append(it.spec).append("\n\n"); }
+        return s.toString().trim();
+    }
+    private void addOpt(Outfit o, String name, String asset, Item... rest) {
+        Option op = new Option(); op.name = name; op.asset = asset;
+        op.items.add(underwearFor(o.band));
+        for (Item i : rest) op.items.add(i);
+        o.options.add(op);
+    }
+    private Item it(String l, String s, String k) { return new Item(l, s, k); }
+    private void buildOptions(Outfit o) {
+        // Option A is built from o.items (index 0 is underwear, skip it: addOpt re-adds it)
+        String[] namesA = {"奶黄甜美风","牛仔背带裙风","海军学院风","粉色甜酷风","焦糖学院风","藕粉同色系","奶油全套风"};
+        String assetA = (o.band >= 2 && o.band <= 5) ? ("opt" + o.band + "_0.jpg") : ("band" + o.band + ".jpg");
+        java.util.List<Item> rest = o.items.subList(1, o.items.size());
+        addOpt(o, namesA[o.band], assetA, rest.toArray(new Item[0]));
+        switch (o.band) {
+            case 0:
+                addOpt(o, "碎花度假风", null, it("连衣裙","浅色碎花短袖连衣裙，120码，纯棉薄款，裙长到膝盖 — 照这个款式挑","女童碎花连衣裙 120码 夏"), it("安全裤+鞋","白色安全裤一条 + 白色包头凉鞋约28码","女童安全裤 凉鞋 28码"), it("帽子","草编遮阳帽，帽围约52cm","女童草帽 遮阳 52cm"));
+                addOpt(o, "运动清爽风", null, it("上衣","白色速干短袖T恤，120码，网眼透气","女童速干短袖 120码"), it("下装","浅粉色运动短裤，120码，速干面料","女童运动短裤 120码"), it("鞋","白色网面运动鞋，约28码","女童网面运动鞋 28码"));
+                addOpt(o, "背带裤风", null, it("上衣","白色纯棉短袖T恤，120码","女童白色短袖T恤 120码"), it("下装","浅蓝色牛仔背带短裤，120码，肩带可调","女童牛仔背带短裤 120码"), it("鞋","白色包头凉鞋，约28码","女童包头凉鞋 白色 28码"));
+                break;
+            case 1:
+                addOpt(o, "碎花裙风", null, it("连衣裙","碎花短袖连衣裙，120码，薄棉，配安全裤","女童碎花连衣裙 120码"), it("鞋","白色凉鞋/小白鞋，约28码","女童凉鞋 白色 28码"), it("帽子","粉色鸭舌帽，帽围约52cm","女童鸭舌帽 粉色 52cm"));
+                addOpt(o, "裙裤休闲风", null, it("上衣","浅粉色短袖T恤，120码","女童短袖T恤 粉色 120码"), it("下装","白色百褶裙裤，120码","女童裙裤 白色 120码"), it("鞋","白色网面运动鞋，约28码","女童网面运动鞋 28码"));
+                addOpt(o, "条纹海军风", null, it("上衣","红白/蓝白条纹短袖T恤，120码","女童条纹短袖 120码"), it("下装","藏青色五分裤，120码","女童五分裤 藏青 120码"), it("鞋帽","白色运动鞋约28码 + 蓝色鸭舌帽","女童运动鞋 28码 鸭舌帽"));
+                break;
+            case 2:
+                addOpt(o, "燕麦碎花风", "opt2_1.jpg", it("外套","燕麦色麻花针织开衫，120码，薄款 — 图上外层","女童针织开衫 燕麦色 120码"), it("连衣裙","浅色碎花连衣裙，120码，配白色打底裤 — 图上这件","女童碎花连衣裙 打底裤 120码"), it("鞋","米色玛丽珍鞋，约28码 — 图上这双","女童玛丽珍鞋 28码"));
+                addOpt(o, "牛仔休闲风", "opt2_2.jpg", it("外套","浅蓝色牛仔外套，120码，薄款 — 图上这件","女童牛仔外套 120码"), it("上衣+下装","白色T恤 + 卡其色阔腿长裤，各120码 — 图上这套","女童阔腿裤 卡其 120码"), it("鞋帽","白色运动鞋约28码 + 粉色鸭舌帽 — 图上这套","女童运动鞋 28码 鸭舌帽 粉色"));
+                addOpt(o, "森系卫衣风", "opt2_3.jpg", it("上衣","鼠尾草绿卫衣，120码，薄绒/毛圈 — 图上这件","女童卫衣 绿色 120码"), it("下装","米色灯芯绒半身裙 + 黑色打底裤，120码 — 图上这套","女童灯芯绒半身裙 打底裤 120码"), it("鞋","棕色乐福鞋，约28码 — 图上这双","女童乐福鞋 棕色 28码"));
+                break;
+            case 3:
+                addOpt(o, "格纹贝雷风", "opt3_1.jpg", it("上衣","米色麻花针织毛衣，120码 — 图上这件","女童麻花毛衣 米色 120码"), it("下装","棕色格纹半身裙 + 黑色打底裤，120码 — 图上这套","女童格纹裙 打底裤 120码"), it("鞋帽","棕色短靴约28码 + 米色贝雷帽 — 图上这套","女童短靴 贝雷帽 120码"));
+                addOpt(o, "运动棒球风", "opt3_2.jpg", it("外套","藏青色飞行员/棒球夹克，120码，防风款 — 图上这件","女童棒球服外套 120码"), it("内搭+下装","灰色卫衣 + 蓝色牛仔长裤，各120码 — 图上这套","女童卫衣 灰色 牛仔裤 120码"), it("鞋","白色运动鞋，约28码 — 图上这双","女童运动鞋 白色 28码"));
+                addOpt(o, "风衣文艺风", "opt3_3.jpg", it("外套","米色/卡其薄风衣，120码，中长款 — 图上这件","女童风衣 120码"), it("内搭+下装","条纹长袖T恤 + 蓝色牛仔长裤，120码 — 图上这套","女童条纹长袖 牛仔裤 120码"), it("鞋","白色运动鞋，约28码","女童运动鞋 白色 28码"));
+                break;
+            case 4:
+                addOpt(o, "藏青运动风", "opt4_1.jpg", it("外套","藏青色棉服/轻羽绒，120码，连帽款 — 图上这件","女童棉服 藏青 120码"), it("内搭+下装","浅粉色毛衣 + 灰色加绒运动裤，120码 — 图上这套","女童毛衣 粉色 加绒裤 120码"), it("鞋","白色保暖运动鞋，约28–29码 — 图上这双","女童保暖运动鞋 29码"));
+                addOpt(o, "奶油针织风", "opt4_2.jpg", it("外套","象牙白色短款棉服/羽绒服，120码 — 图上这件","女童短款羽绒服 白色 120码"), it("连衣裙","米色针织连衣裙，120码，配黑色加绒打底裤 — 图上这套","女童针织连衣裙 打底裤 120码"), it("鞋","棕色短靴，约29码 — 图上这双","女童短靴 加绒 29码"));
+                addOpt(o, "酒红大衣风", "opt4_3.jpg", it("外套","酒红色双排扣呢大衣，120码，中长款 — 图上这件","女童呢大衣 酒红 120码"), it("内搭+下装","米白色毛衣 + 黑色加绒长裤，120码 — 图上这套","女童毛衣 米白 加绒裤 120码"), it("鞋","棕色短靴，约29码 — 图上这双","女童短靴 棕色 29码"));
+                break;
+            case 5:
+                addOpt(o, "藏青同色风", "opt5_1.jpg", it("外套","藏青色中长款羽绒服，120码，连帽 — 图上这件","女童羽绒服 藏青 中长款 120码"), it("下装","灰色加绒长裤，120码 — 图上这条","女童加绒长裤 灰色 120码"), it("鞋帽","米白色针织帽+围巾 + 黑色雪地靴约29码 — 图上这套","女童雪地靴 黑色 针织帽 围巾"));
+                addOpt(o, "焦糖长款风", "opt5_2.jpg", it("外套","驼色长款棉服/羽绒服，120码 — 图上这件","女童长款羽绒服 驼色 120码"), it("下装","黑色加绒长裤，120码 — 图上这条","女童加绒长裤 黑色 120码"), it("鞋帽","粉色针织帽+围巾 + 棕色雪地靴约29码 — 图上这套","女童雪地靴 棕色 针织帽 粉色"));
+                addOpt(o, "香芋紫风", "opt5_3.jpg", it("外套","浅紫色羽绒服，120码，中长款 — 图上这件","女童羽绒服 浅紫 120码"), it("下装","白色/米色加绒长裤，120码 — 图上这条","女童加绒长裤 白色 120码"), it("鞋帽","白色针织帽+围巾 + 粉色雪地靴约29码 — 图上这套","女童雪地靴 粉色 针织帽 白色"));
+                break;
+            default:
+                addOpt(o, "藕粉长款风", null, it("外套","藕粉色长款厚羽绒服，120码，连帽 — 照这个款式挑","女童长款羽绒服 粉色 120码"), it("下装","黑色加绒长裤，120码","女童加绒长裤 黑色 120码"), it("鞋帽手套","白色雪地靴约29码 + 米白针织帽围巾手套","女童雪地靴 白色 围巾 手套"));
+                addOpt(o, "藏青长款风", null, it("外套","藏青色长款厚羽绒服，120码，连帽","女童长款羽绒服 藏青 120码"), it("下装","黑色加绒长裤，120码","女童加绒长裤 黑色 120码"), it("鞋帽手套","黑色雪地靴约29码 + 米白针织帽围巾手套","女童雪地靴 黑色 针织帽 手套"));
+                addOpt(o, "焦糖长款风", null, it("外套","驼色长款厚羽绒服，120码，连帽","女童长款羽绒服 驼色 120码"), it("下装","黑色加绒长裤，120码","女童加绒长裤 黑色 120码"), it("鞋帽手套","棕色雪地靴约29码 + 粉色针织帽围巾手套","女童雪地靴 棕色 针织帽 粉色"));
+                break;
+        }
+        // rainy / wind extras go to every option's shop list via o.items extras already in option A only; append to all
+    }
     private void applyOutfit(Outfit o) {
+        if (o.options.isEmpty()) buildOptions(o);
         currentOutfit = o;
         currentBand = o.band;
-        photoView.setImageBitmap(loadBandBitmap(o.band));
-        detailView.setText(detailText(o));
+        optLayout.removeAllViews();
+        for (int i = 0; i < o.options.size(); i++) {
+            final int idx = i;
+            Button b = new Button(this);
+            b.setText("搭配" + (i + 1) + "：" + o.options.get(i).name);
+            b.setTextSize(15); b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            b.setOnClickListener(v -> renderOption(idx));
+            optLayout.addView(b);
+        }
+        renderOption(0);
+    }
+    private void renderOption(int idx) {
+        if (currentOutfit == null || currentOutfit.options.isEmpty()) return;
+        currentOpt = idx;
+        Option op = currentOutfit.options.get(idx);
+        currentAsset = op.asset;
+        android.graphics.Bitmap bm = currentAsset != null ? loadAssetBitmap(currentAsset) : null;
+        if (bm == null) bm = loadBandBitmap(currentOutfit.band);
+        photoView.setImageBitmap(bm);
+        detailView.setText(detailFor(currentOutfit, op));
         shopLayout.removeAllViews();
-        for (Item it : o.items) {
+        for (Item it : op.items) {
             if (it.keyword == null || it.keyword.isEmpty()) continue;
             Button btn = new Button(this);
             btn.setText("🛒 " + it.label + "：淘宝搜「" + it.keyword + "」");
@@ -318,6 +407,12 @@ public class MainActivity extends Activity {
         StringBuilder sb=new StringBuilder(); String line; while((line=r.readLine())!=null) sb.append(line); r.close(); return sb.toString();
     }
 
+    private android.graphics.Bitmap loadAssetBitmap(String name) {
+        try {
+            java.io.InputStream is = getAssets().open(name);
+            android.graphics.Bitmap bm = android.graphics.BitmapFactory.decodeStream(is); is.close(); return bm;
+        } catch (Exception e) { return null; }
+    }
     private android.graphics.Bitmap loadBandBitmap(int band) {
         try {
             java.io.InputStream is = getAssets().open("band" + band + ".jpg");
