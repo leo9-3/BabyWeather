@@ -140,68 +140,68 @@ public class MainActivity extends Activity {
     private Outfit outfitFor(double day, boolean rainy, double uv, double wind, double tmin) {
         Outfit o = new Outfit(); o.rainy = rainy;
         if (day >= 28) {
-            o.band=0; o.sleeve=0; o.pants=0; o.hat = uv>=3?1:2; o.topColor=Color.parseColor("#FFD93D"); o.bottomColor=Color.parseColor("#4D96FF"); o.shoeColor=Color.parseColor("#B07D4F");
-            o.summary="炎热天：短袖+短裤+凉鞋";
-            o.items.add(new Item("上衣","黄色纯棉圆领短袖T恤，120码，95%棉+5%氨纶，薄款（约180g棉），胸前小汽车印花 — 图上这件","儿童纯棉短袖T恤 120码 薄款"));
-            o.items.add(new Item("下装","蓝色五分短裤，120码，松紧腰牛仔/卡其，裤长到膝盖上方 — 图上这条","儿童五分短裤 120码 松紧腰"));
-            o.items.add(new Item("鞋","棕色包头运动凉鞋，魔术贴款，约28码，鞋底防滑 — 图上这双","儿童包头凉鞋 魔术贴 28码"));
-            o.items.add(new Item("帽子","宽檐遮阳帽，UPF50+，帽围约52cm — 图上这顶","儿童遮阳帽 UPF50 52cm"));
+            o.band=0; o.sleeve=0; o.pants=0; o.hat=1;
+            o.summary="奶黄+浅粉：小飞袖T恤+裙裤+草帽";
+            o.items.add(new Item("上衣","奶黄色小飞袖纯棉T恤，120码，飞袖设计，薄款透气 — 图上这件","女童小飞袖T恤 120码 夏"));
+            o.items.add(new Item("下装","浅粉色百褶裙裤，120码，外面是裙子、里面是短裤，跑跳不走光 — 图上这条","女童裙裤 百褶 120码 夏"));
+            o.items.add(new Item("鞋","白色包头凉鞋，约28码，魔术贴、软底防滑 — 图上这双","女童包头凉鞋 白色 28码"));
+            o.items.add(new Item("帽子","草编遮阳帽，帽围约52cm，宽檐防晒 — 图上这顶","女童草帽 遮阳 52cm"));
         } else if (day >= 23) {
-            o.band=1; o.sleeve=0; o.pants=1; o.hat=2; o.topColor=Color.parseColor("#FF8A5C"); o.bottomColor=Color.parseColor("#6BCB77"); o.shoeColor=Color.parseColor("#FFFFFF");
-            o.summary="暖和天：短袖+七分裤";
-            o.items.add(new Item("上衣","橙色纯棉圆领短袖T恤，120码，薄款透气 — 图上这件","儿童纯棉短袖T恤 120码"));
-            o.items.add(new Item("下装","绿色七分裤/薄长裤，120码，松紧腰，面料薄棉 — 图上这条","儿童七分裤 薄款 120码"));
-            o.items.add(new Item("鞋","白色透气网面运动鞋，魔术贴，约28码 — 图上这双","儿童网面运动鞋 魔术贴 28码"));
-            o.items.add(new Item("备用外套","早晚备薄防晒衣/空调衫一件（最低"+Math.round(tmin)+"°C时套上），白色或浅蓝","儿童防晒衣 薄款 120码"));
-            o.items.add(new Item("帽子","蓝色鸭舌帽，帽围约52cm — 图上这顶","儿童鸭舌帽 52cm"));
+            o.band=1; o.sleeve=0; o.pants=1; o.hat=2;
+            o.summary="清爽学院风：白T+牛仔背带裙+粉帽子";
+            o.items.add(new Item("上衣","白色纯棉短袖T恤，120码，薄款，穿在背带裙里面 — 图上里层这件","女童白色短袖T恤 120码"));
+            o.items.add(new Item("裙装","浅蓝色牛仔背带裙，120码，A字版型、肩带可调，裙长到膝盖 — 图上这件","女童牛仔背带裙 120码"));
+            o.items.add(new Item("鞋","白色网面小白鞋，约28码，魔术贴 — 图上这双","女童小白鞋 网面 28码"));
+            o.items.add(new Item("帽子","浅粉色鸭舌帽，帽围约52cm — 图上这顶","女童鸭舌帽 粉色 52cm"));
+            o.items.add(new Item("备用外套","早晚备薄防晒衣一件（最低"+Math.round(tmin)+"°C时套上），白色或奶黄色","女童防晒衣 薄款 120码"));
         } else if (day >= 18) {
-            o.band=2; o.sleeve=1; o.pants=2; o.topColor=Color.parseColor("#4D96FF"); o.bottomColor=Color.parseColor("#5B5B8A"); o.shoeColor=Color.parseColor("#FF6B6B");
-            o.summary="舒适天：长袖T恤+长裤，备薄外套";
-            o.items.add(new Item("上衣","蓝色纯棉长袖T恤，120码，中等厚度，圆领 — 图上这件","儿童纯棉长袖T恤 120码"));
-            o.items.add(new Item("下装","深蓝长裤，120码，运动裤/软牛仔，松紧腰 — 图上这条","儿童长裤 运动裤 120码"));
-            o.items.add(new Item("鞋","红色运动鞋，网面+魔术贴，约28码 — 图上这双","儿童运动鞋 魔术贴 28码"));
-            o.items.add(new Item("备用外套","薄夹克一件，早晚穿、中午脱，藏青/牛仔蓝","儿童薄夹克 120码"));
+            o.band=2; o.sleeve=1; o.pants=2;
+            o.summary="海军风：条纹长袖+百褶裙+打底裤";
+            o.items.add(new Item("上衣","白底藏青条纹长袖T恤，120码，纯棉中等厚度，海军风条纹 — 图上这件","女童条纹长袖T恤 120码"));
+            o.items.add(new Item("下装","藏青色百褶半身裙，120码，裙长到膝盖，里面配黑色薄打底裤一条 — 图上这套","女童百褶裙 打底裤 120码"));
+            o.items.add(new Item("鞋","白色运动鞋/小白鞋，约28码 — 图上这双","女童小白鞋 运动鞋 28码"));
+            o.items.add(new Item("备用外套","薄款针织开衫一件，早晚套上，燕麦色/米白色","女童针织开衫 薄款 120码"));
         } else if (day >= 13) {
-            o.band=3; o.sleeve=1; o.pants=2; o.hasOuter=true; o.topColor=Color.parseColor("#FFD93D"); o.outerColor=Color.parseColor("#4D96FF"); o.bottomColor=Color.parseColor("#44475A"); o.shoeColor=Color.parseColor("#333333");
-            o.summary="凉天：卫衣/毛衣 + 夹克外套";
-            o.items.add(new Item("内搭","黄色圆领卫衣，120码，加薄绒或毛圈款，纯棉 — 图上里层这件","儿童卫衣 圆领 120码"));
-            o.items.add(new Item("外套","蓝色夹克/风衣，120码，防风面料，拉链款 — 图上外层这件","儿童夹克 防风 120码"));
-            o.items.add(new Item("下装","深灰长裤，120码，稍厚运动裤/牛仔裤 — 图上这条","儿童长裤 120码 秋款"));
-            o.items.add(new Item("鞋","黑色运动鞋，约28码，中厚棉袜 — 图上这双","儿童运动鞋 28码 秋"));
+            o.band=3; o.sleeve=1; o.pants=2; o.hasOuter=false;
+            o.summary="甜酷风：粉色连帽卫衣+米色背带裤";
+            o.items.add(new Item("上衣","浅粉色连帽卫衣，120码，薄绒或毛圈款，宽松版型 — 图上这件","女童连帽卫衣 粉色 120码"));
+            o.items.add(new Item("下装","米色灯芯绒背带长裤，120码，肩带可调，裤脚直筒 — 图上这条","女童灯芯绒背带裤 120码"));
+            o.items.add(new Item("鞋","白色运动鞋，约28码，厚棉袜 — 图上这双","女童运动鞋 白色 28码"));
+            o.items.add(new Item("备用外套","风大/早晚加卡其色薄风衣一件","女童薄风衣 120码"));
         } else if (day >= 8) {
-            o.band=4; o.sleeve=1; o.pants=3; o.hasOuter=true; o.topColor=Color.parseColor("#E67E22"); o.outerColor=Color.parseColor("#C0392B"); o.bottomColor=Color.parseColor("#2C3E50"); o.shoeColor=Color.parseColor("#5D4037");
-            o.summary="冷天：毛衣+厚外套/棉服";
-            o.items.add(new Item("内搭","橙色毛衣/抓绒上衣，120码，圆领套头 — 图上里层这件","儿童毛衣 抓绒 120码"));
-            o.items.add(new Item("外套","红色棉服/厚夹克，120码，填充棉款，连帽更挡风 — 图上外层这件","儿童棉服 连帽 120码"));
-            o.items.add(new Item("下装","深蓝加绒长裤，120码，一体绒 — 图上这条","儿童加绒长裤 120码"));
-            o.items.add(new Item("鞋","棕色保暖运动鞋/短靴，约28–29码，厚棉袜 — 图上这双","儿童保暖鞋 加绒 29码"));
+            o.band=4; o.sleeve=1; o.pants=3; o.hasOuter=true;
+            o.summary="焦糖系：泰迪绒外套+格纹裙+打底裤";
+            o.items.add(new Item("内搭","米白色高领针织毛衣，120码，细针织、不扎脖子 — 图上里层这件","女童高领毛衣 米白 120码"));
+            o.items.add(new Item("外套","焦糖棕色泰迪绒/羊羔绒外套，120码，翻领宽松款 — 图上外层这件","女童羊羔绒外套 120码"));
+            o.items.add(new Item("下装","棕色格纹半身裙，120码，里面配黑色加绒打底裤一条 — 图上这套","女童格纹裙 加绒打底裤 120码"));
+            o.items.add(new Item("鞋","棕色加绒短靴，约28–29码 — 图上这双","女童短靴 加绒 29码"));
         } else if (day >= 3) {
-            o.band=5; o.sleeve=1; o.pants=3; o.hasOuter=true; o.puffy=true; o.hat=3; o.scarf=true; o.topColor=Color.parseColor("#9B59B6"); o.outerColor=Color.parseColor("#2471A3"); o.bottomColor=Color.parseColor("#1B2631"); o.shoeColor=Color.parseColor("#333333");
-            o.summary="寒冷天：羽绒服+保暖多层";
-            o.items.add(new Item("内搭","紫色保暖打底+毛衣，120码，打底选德绒/发热面料 — 图上里层","儿童保暖内衣套装 120码 德绒"));
-            o.items.add(new Item("外套","蓝色羽绒服，120码，90%白鸭绒、中长款、连帽 — 图上这件横条纹羽绒服","儿童羽绒服 中长款 120码"));
-            o.items.add(new Item("下装","黑色加绒保暖裤，120码，外裤+保暖裤两层 — 图上这条","儿童加绒裤 保暖 120码"));
-            o.items.add(new Item("鞋帽","黑色保暖靴约29码 + 红色针织帽（帽围52cm）+ 围巾 — 图上这套","儿童雪地靴 29码 儿童针织帽 围巾"));
+            o.band=5; o.sleeve=1; o.pants=3; o.hasOuter=true; o.puffy=true; o.hat=3; o.scarf=true;
+            o.summary="藕粉系：粉色羽绒服+米白帽子围巾同色系";
+            o.items.add(new Item("内搭","米白色毛衣/抓绒，120码，穿在羽绒服里面 — 图上里层","女童毛衣 米白 120码"));
+            o.items.add(new Item("外套","藕粉色羽绒服，120码，中长款、连帽，90%白鸭绒 — 图上这件","女童羽绒服 粉色 中长款 120码"));
+            o.items.add(new Item("下装","米色加绒长裤，120码，宽松直筒 — 图上这条","女童加绒长裤 米色 120码"));
+            o.items.add(new Item("鞋帽","米白色雪地靴约29码 + 米白色针织帽 + 米白色围巾，同色系一套 — 图上这套","女童雪地靴 米白 针织帽 围巾"));
         } else {
-            o.band=6; o.sleeve=1; o.pants=3; o.hasOuter=true; o.puffy=true; o.hat=3; o.scarf=true; o.gloves=true; o.topColor=Color.parseColor("#7D3C98"); o.outerColor=Color.parseColor("#B03A2E"); o.bottomColor=Color.parseColor("#17202A"); o.shoeColor=Color.parseColor("#222222");
-            o.summary="严寒天：厚羽绒全套";
-            o.items.add(new Item("内搭","保暖内衣+厚毛衣/抓绒，120码，两层 — 图上里层","儿童保暖内衣 厚毛衣 120码"));
-            o.items.add(new Item("外套","红色长款厚羽绒服，120码，连帽、大填充 — 图上这件","儿童长款羽绒服 120码 加厚"));
-            o.items.add(new Item("下装","加绒外裤+保暖裤，120码 — 图上这条","儿童加绒外裤 120码"));
-            o.items.add(new Item("鞋帽手套","雪地靴约29码 + 针织帽 + 围巾 + 手套全套 — 图上这套","儿童雪地靴 手套 围巾 套装"));
+            o.band=6; o.sleeve=1; o.pants=3; o.hasOuter=true; o.puffy=true; o.hat=3; o.scarf=true; o.gloves=true;
+            o.summary="奶油系：奶白长款羽绒+同色帽围巾手套";
+            o.items.add(new Item("内搭","保暖打底+厚毛衣，120码，两层，米白/燕麦色","女童保暖打底 厚毛衣 120码"));
+            o.items.add(new Item("外套","奶白色长款厚羽绒服，120码，连帽、过膝款 — 图上这件","女童长款羽绒服 白色 120码"));
+            o.items.add(new Item("下装","黑色加绒长裤，120码，外裤+保暖裤两层 — 图上这条","女童加绒长裤 黑色 120码"));
+            o.items.add(new Item("鞋帽手套","白色雪地靴约29码 + 米白色针织帽 + 围巾 + 手套，同色系全套 — 图上这套","女童雪地靴 白色 手套 围巾 套装"));
         }
         o.items.add(0, underwearFor(o.band));
-        if (rainy) o.items.add(new Item("雨具","儿童雨衣（书包位款）+ 雨伞，或雨靴一双，今天有雨必带","儿童雨衣 书包位 雨靴"));
-        if (wind >= 30) o.items.add(new Item("防风","风大：外套拉链拉到顶，帽子戴紧，别穿宽松灌风款","儿童防风外套 120码"));
+        if (rainy) o.items.add(new Item("雨具","儿童雨衣（书包位款）+ 雨伞，或雨靴一双，今天有雨必带","女童雨衣 书包位 雨靴"));
+        if (wind >= 30) o.items.add(new Item("防风","风大：外套拉链拉到顶，帽子戴紧，别穿宽松灌风款","女童防风外套 120码"));
         return o;
     }
 
     private Item underwearFor(int band) {
         switch (band) {
-            case 0: return new Item("内衣 · 第1层（最里层）","白色网眼薄棉小背心，120码，纯棉薄款，贴身吸汗；配浅色纯棉平角内裤一条 — 所有衣服都穿在它外面，领口露出的白边就是它","儿童背心 纯棉 内裤 120码 薄款");
-            case 1: return new Item("内衣 · 第1层（最里层）","白色/浅色纯棉小背心，120码，薄款；配纯棉平角内裤一条 — 贴身层，短袖T恤穿在它外面","儿童纯棉背心 内裤套装 120码");
-            case 2: return new Item("内衣 · 第1层（最里层）","纯棉薄打底衫/小背心，120码，圆领薄款；配纯棉平角内裤一条 — 长袖T恤穿在它外面","儿童纯棉打底衫 薄款 120码");
-            case 3: return new Item("内衣 · 第1层（最里层）","纯棉秋衣，120码，薄款圆领打底；配纯棉内裤一条，秋裤/打底裤穿在长裤里面 — 卫衣穿在秋衣外面","儿童纯棉秋衣秋裤 120码 薄款");
+            case 0: return new Item("内衣 · 第1层（最里层）","白色网眼薄棉小背心，120码，纯棉薄款，贴身吸汗；配浅色女童纯棉内裤一条 — 所有衣服都穿在它外面，领口露出的白边就是它","儿童背心 纯棉 内裤 120码 薄款");
+            case 1: return new Item("内衣 · 第1层（最里层）","白色/浅色纯棉小背心，120码，薄款；配女童纯棉内裤一条 — 贴身层，短袖T恤穿在它外面","儿童纯棉背心 内裤套装 120码");
+            case 2: return new Item("内衣 · 第1层（最里层）","纯棉薄打底衫/小背心，120码，圆领薄款；配女童纯棉内裤一条 — 长袖T恤穿在它外面","儿童纯棉打底衫 薄款 120码");
+            case 3: return new Item("内衣 · 第1层（最里层）","纯棉秋衣，120码，薄款圆领打底；配女童纯棉内裤一条，秋裤/打底裤穿在长裤里面 — 卫衣穿在秋衣外面","儿童纯棉秋衣秋裤 120码 薄款");
             case 4: return new Item("内衣 · 第1层（最里层）","纯棉秋衣秋裤套装，120码，中厚款；秋裤是下装的第一层，外面再穿加绒长裤 — 毛衣穿在秋衣外面","儿童秋衣秋裤套装 120码 中厚");
             case 5: return new Item("内衣 · 第1层（最里层）","德绒保暖内衣套装（秋衣+秋裤），120码，自发热/德绒面料，贴身不扎 — 羽绒服里面的毛衣再穿在它外面","儿童德绒保暖内衣套装 120码");
             default: return new Item("内衣 · 第1层（最里层）","加绒/加厚保暖内衣套装（秋衣+秋裤），120码，最贴身一层 — 外面依次是毛衣、厚羽绒服、加绒外裤","儿童加绒保暖内衣套装 120码");
