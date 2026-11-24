@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
     private ImageView photoView;
     private int currentBand = 3;
     private LinearLayout optLayout;
-    private android.widget.EditText apiBaseInput, apiKeyInput, apiModelInput;
+    private android.widget.EditText apiBaseInput, apiKeyInput, apiModelInput, apiImgModelInput;
     private Button aiBtn;
     private int currentOpt = 0;
     private String currentAsset = null;
@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
 
     // ---------- data ----------
     static class Item { String label, spec, keyword; Item(String l,String s,String k){label=l;spec=s;keyword=k;} }
-    static class Option { String name, asset; java.util.List<Item> items = new java.util.ArrayList<>(); }
+    static class Option { String name, asset; android.graphics.Bitmap bitmap; java.util.List<Item> items = new java.util.ArrayList<>(); }
     static class Outfit {
         int band, topColor, outerColor, bottomColor, shoeColor;
         int sleeve = 1;      // 0 short, 1 long
@@ -129,13 +129,14 @@ public class MainActivity extends Activity {
         shopLayout = new LinearLayout(this); shopLayout.setOrientation(LinearLayout.VERTICAL); root.addView(shopLayout);
 
         TextView ah = new TextView(this); ah.setText("\n⚙️ AI 模型设置（填一次保存，下次自动带出）"); ah.setTextSize(18); ah.setTextColor(Color.parseColor("#E67E22")); root.addView(ah);
-        TextView an = new TextView(this); an.setText("填 OpenAI 兼容接口：地址如 https://api.deepseek.com/v1 或 https://api.openai.com/v1；模型如 deepseek-chat / gpt-4o-mini。Key 只存在本机，不上传别处。"); an.setTextSize(12); an.setTextColor(Color.parseColor("#999999")); root.addView(an);
+        TextView an = new TextView(this); an.setText("填 OpenAI 兼容接口：地址如 https://api.deepseek.com/v1 或 https://api.openai.com/v1；模型如 deepseek-chat / gpt-4o-mini。再填绘图模型（如 dall-e-3 / gpt-image-1），AI 推荐就能实时画到小模特身上；注意 DeepSeek 等纯文字接口没有绘图模型可填。Key 只存在本机。"); an.setTextSize(12); an.setTextColor(Color.parseColor("#999999")); root.addView(an);
         android.content.SharedPreferences cfg = getSharedPreferences("ai_cfg", MODE_PRIVATE);
         apiBaseInput = new android.widget.EditText(this); apiBaseInput.setHint("接口地址，如 https://api.deepseek.com/v1"); apiBaseInput.setTextSize(14); apiBaseInput.setSingleLine(true); apiBaseInput.setText(cfg.getString("base", "")); root.addView(apiBaseInput);
         apiKeyInput = new android.widget.EditText(this); apiKeyInput.setHint("API Key"); apiKeyInput.setTextSize(14); apiKeyInput.setSingleLine(true); apiKeyInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); apiKeyInput.setText(cfg.getString("key", "")); root.addView(apiKeyInput);
         apiModelInput = new android.widget.EditText(this); apiModelInput.setHint("模型名，如 deepseek-chat"); apiModelInput.setTextSize(14); apiModelInput.setSingleLine(true); apiModelInput.setText(cfg.getString("model", "")); root.addView(apiModelInput);
+        apiImgModelInput = new android.widget.EditText(this); apiImgModelInput.setHint("绘图模型名（可选，如 dall-e-3 / gpt-image-1，留空就不画图）"); apiImgModelInput.setTextSize(14); apiImgModelInput.setSingleLine(true); apiImgModelInput.setText(cfg.getString("imgmodel", "")); root.addView(apiImgModelInput);
         Button saveCfg = new Button(this); saveCfg.setText("保存 AI 设置"); saveCfg.setTextSize(14);
-        saveCfg.setOnClickListener(v -> { cfg.edit().putString("base", apiBaseInput.getText().toString().trim()).putString("key", apiKeyInput.getText().toString().trim()).putString("model", apiModelInput.getText().toString().trim()).apply(); Toast.makeText(this, "AI 设置已保存", Toast.LENGTH_SHORT).show(); });
+        saveCfg.setOnClickListener(v -> { cfg.edit().putString("base", apiBaseInput.getText().toString().trim()).putString("key", apiKeyInput.getText().toString().trim()).putString("model", apiModelInput.getText().toString().trim()).putString("imgmodel", apiImgModelInput.getText().toString().trim()).apply(); Toast.makeText(this, "AI 设置已保存", Toast.LENGTH_SHORT).show(); });
         root.addView(saveCfg);
 
         TextView foot = new TextView(this);
@@ -165,7 +166,7 @@ public class MainActivity extends Activity {
         Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         LinearLayout lay = new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setBackgroundColor(Color.WHITE); lay.setPadding(24,32,24,24);
         TextView h = new TextView(this); h.setText("今日造型放大图 — 双指缩放 / 拖动"); h.setTextSize(17); h.setGravity(Gravity.CENTER); lay.addView(h);
-        TouchImageView big = new TouchImageView(this); big.setImageBitmap(currentAsset != null ? loadAssetBitmap(currentAsset) : loadBandBitmap(currentBand)); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
+        TouchImageView big = new TouchImageView(this); big.setImageBitmap(currentOutfit != null && !currentOutfit.options.isEmpty() && currentOutfit.options.get(currentOpt).bitmap != null ? currentOutfit.options.get(currentOpt).bitmap : (currentAsset != null ? loadAssetBitmap(currentAsset) : loadBandBitmap(currentBand))); big.setBackgroundColor(Color.parseColor("#FFF8F0"));
         lay.addView(big, new LinearLayout.LayoutParams(-1, 0, 1f));
         TextView det = new TextView(this); det.setText(currentOutfit != null && !currentOutfit.options.isEmpty() ? detailFor(currentOutfit, currentOutfit.options.get(currentOpt)) : detailText(currentOutfit)); det.setTextSize(15); det.setPadding(16,16,16,16); lay.addView(det);
         Button close = new Button(this); close.setText("关闭"); close.setOnClickListener(v -> d.dismiss()); lay.addView(close);
@@ -259,7 +260,7 @@ public class MainActivity extends Activity {
         s.append("这一套：").append(op.name).append("（").append(o.summary).append("）\n");
         s.append("尺码参考：120码 / 鞋约28–29码（按孩子实际身高脚长）\n");
         s.append("穿的顺序：从里到外，先内衣，再内搭/上衣，再外套。\n");
-        if (op.asset == null) s.append("注：这一套暂无单独模特图，上方主图是同温度档的搭配1，穿法以清单为准。\n");
+        if (op.asset == null && op.bitmap == null) s.append("注：这一套暂无单独模特图，上方主图是同温度档的搭配1，穿法以清单为准。\n");
         s.append("\n");
         int n = 1;
         for (Item it : op.items) { s.append(n++).append(". ").append(it.label).append("：").append(it.spec).append("\n\n"); }
@@ -345,7 +346,7 @@ public class MainActivity extends Activity {
         currentOpt = idx;
         Option op = currentOutfit.options.get(idx);
         currentAsset = op.asset;
-        android.graphics.Bitmap bm = currentAsset != null ? loadAssetBitmap(currentAsset) : null;
+        android.graphics.Bitmap bm = op.bitmap != null ? op.bitmap : (currentAsset != null ? loadAssetBitmap(currentAsset) : null);
         if (bm == null) bm = loadBandBitmap(currentOutfit.band);
         photoView.setImageBitmap(bm);
         detailView.setText(detailFor(currentOutfit, op));
@@ -377,7 +378,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "请先在页面下方「AI 模型设置」里填好接口地址、Key、模型名并保存", Toast.LENGTH_LONG).show();
             return;
         }
-        getSharedPreferences("ai_cfg", MODE_PRIVATE).edit().putString("base", base).putString("key", key).putString("model", model).apply();
+        getSharedPreferences("ai_cfg", MODE_PRIVATE).edit().putString("base", base).putString("key", key).putString("model", model).putString("imgmodel", apiImgModelInput.getText().toString().trim()).apply();
         int idx = citySpinner.getSelectedItemPosition();
         aiBtn.setEnabled(false); statusView.setText("AI：正在获取天气并请求大模型…");
         execHolder.e.execute(() -> {
@@ -410,7 +411,7 @@ public class MainActivity extends Activity {
                     + "孩子：2021年出生的女童，约5岁，身高约110cm，穿120码，鞋约28-29码，幼儿园在园、跑动多。"
                     + "请结合当下最新流行的女童穿搭趋势（低饱和同色系、韩系/学院风等，不要红配橙这种撞色土味搭配），给出一套适合今天天气的完整穿衣推荐。"
                     + "要求：从内衣开始由内到外共5-7件，每件给出具体颜色、款式、材质厚度和尺码，并给出带「女童」和尺码的淘宝搜索关键词。"
-                    + "只输出JSON，不要任何其他文字，格式：{\"name\":\"这套搭配的名字\",\"items\":[{\"label\":\"内衣\",\"spec\":\"具体描述\",\"keyword\":\"淘宝搜索关键词\"}]}";
+                    + "只输出JSON，不要任何其他文字，格式：{\"name\":\"这套搭配的名字\",\"img\":\"英文绘图提示词：一张5岁中国小女孩双马尾全身写实影棚照片，穿上这套衣服，逐件写清颜色款式\",\"items\":[{\"label\":\"内衣\",\"spec\":\"具体描述\",\"keyword\":\"淘宝搜索关键词\"}]}";
                 org.json.JSONObject msg1 = new org.json.JSONObject(); msg1.put("role", "system"); msg1.put("content", "你是专业的儿童穿搭顾问，只输出JSON。");
                 org.json.JSONObject msg2 = new org.json.JSONObject(); msg2.put("role", "user"); msg2.put("content", prompt);
                 org.json.JSONArray msgs = new org.json.JSONArray(); msgs.put(msg1); msgs.put(msg2);
@@ -441,10 +442,49 @@ public class MainActivity extends Activity {
                     aop.items.add(new Item(o.optString("label", "单品"), o.optString("spec", ""), o.optString("keyword", "")));
                 }
                 if (aop.items.isEmpty()) throw new Exception("模型没返回清单");
+                String imgModel = apiImgModelInput.getText().toString().trim();
+                final boolean[] imgOk = {false};
+                if (!imgModel.isEmpty()) {
+                    try {
+                        runOnUiThread(() -> statusView.setText("AI：文字推荐已生成，正在把这套画到小模特身上…"));
+                        String imgPrompt = ai.optString("img", "");
+                        if (imgPrompt.isEmpty()) {
+                            StringBuilder ip = new StringBuilder("Photorealistic full-body studio photo of a 5-year-old Chinese girl with two small pigtails, plain light-grey background, wearing: ");
+                            for (Item ii : aop.items) ip.append(ii.spec).append("; ");
+                            imgPrompt = ip.toString();
+                        }
+                        org.json.JSONObject ibody = new org.json.JSONObject(); ibody.put("model", imgModel); ibody.put("prompt", imgPrompt); ibody.put("size", "1024x1024");
+                        String imgUrl = base.endsWith("/") ? base + "images/generations" : base + "/images/generations";
+                        java.net.HttpURLConnection ic = (java.net.HttpURLConnection) new java.net.URL(imgUrl).openConnection();
+                        ic.setRequestMethod("POST"); ic.setConnectTimeout(15000); ic.setReadTimeout(120000); ic.setDoOutput(true);
+                        ic.setRequestProperty("Content-Type", "application/json");
+                        ic.setRequestProperty("Authorization", "Bearer " + key);
+                        byte[] ib = ibody.toString().getBytes("UTF-8");
+                        java.io.OutputStream ios = ic.getOutputStream(); ios.write(ib); ios.close();
+                        int icode = ic.getResponseCode();
+                        java.io.InputStream iis = icode >= 200 && icode < 300 ? ic.getInputStream() : ic.getErrorStream();
+                        java.io.BufferedReader ir = new java.io.BufferedReader(new java.io.InputStreamReader(iis, "UTF-8"));
+                        StringBuilder isb = new StringBuilder(); String il; while ((il = ir.readLine()) != null) isb.append(il); ir.close();
+                        if (icode < 200 || icode >= 300) throw new Exception("绘图接口返回 " + icode);
+                        org.json.JSONObject iresp = new org.json.JSONObject(isb.toString());
+                        org.json.JSONObject d0 = iresp.getJSONArray("data").getJSONObject(0);
+                        android.graphics.Bitmap bmp = null;
+                        if (d0.has("b64_json")) {
+                            byte[] raw = android.util.Base64.decode(d0.getString("b64_json"), android.util.Base64.DEFAULT);
+                            bmp = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                        } else if (d0.has("url")) {
+                            java.net.HttpURLConnection dc = (java.net.HttpURLConnection) new java.net.URL(d0.getString("url")).openConnection();
+                            dc.setConnectTimeout(15000); dc.setReadTimeout(60000);
+                            java.io.InputStream ds = dc.getInputStream();
+                            bmp = android.graphics.BitmapFactory.decodeStream(ds); ds.close();
+                        }
+                        if (bmp != null) { aop.bitmap = bmp; aop.asset = null; imgOk[0] = true; }
+                    } catch (Exception ie) { /* drawing failed: fall back to band photo, text list still shows */ }
+                }
                 final Outfit outfit = outfitFor(tmax, rainy, uv, wind, tmin);
                 buildOptions(outfit);
                 outfit.options.add(aop);
-                outfit.summary = "AI 大模型按今日天气实时生成（模特图为同温度档示意，穿法以清单为准）";
+                outfit.summary = imgOk[0] ? "AI 大模型按今日天气实时生成，模特图就是这套的实时渲染" : "AI 大模型按今日天气实时生成（模特图为同温度档示意，穿法以清单为准）";
                 final String wtext = city + " · 最高 " + Math.round(tmax) + "°C / 最低 " + Math.round(tmin) + "°C · 现在 " + now + "°C（体感 " + Math.round(feels) + "°C）· 降雨概率 " + Math.round(rainP) + "% · 风最大 " + Math.round(wind) + " km/h · 紫外线 " + uv;
                 runOnUiThread(() -> {
                     weatherView.setText(wtext);
@@ -458,7 +498,7 @@ public class MainActivity extends Activity {
                     }
                     int pick = new java.util.Random().nextInt(outfit.options.size());
                     renderOption(pick);
-                    adviceView.setText("AI 推荐是搭配" + outfit.options.size() + "（名字带🤖），加上本地素材库的 " + (outfit.options.size() - 1) + " 套，一共 " + outfit.options.size() + " 套备选。首屏是从中随机挑的一套展示，点照片右上角「🔀 换一套」可以随机换一套，下面的搭配按钮也能逐套看。注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
+                    adviceView.setText("AI 推荐是搭配" + outfit.options.size() + "（名字带🤖），加上本地素材库的 " + (outfit.options.size() - 1) + " 套，一共 " + outfit.options.size() + " 套备选。首屏是从中随机挑的一套展示，点照片右上角「🔀 换一套」可以随机换一套，下面的搭配按钮也能逐套看。" + (imgOk[0] ? "AI 那套已经实时画到小模特身上了（点开它的搭配按钮看图）。" : "AI 那套这次用同温度档主图示意（没填绘图模型或绘图失败），穿法以清单为准。") + "注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
                     statusView.setText("AI 推荐已生成 · " + city);
                     aiBtn.setEnabled(true);
                 });
