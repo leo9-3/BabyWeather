@@ -28,6 +28,8 @@ public class MainActivity extends Activity {
     private ImageView photoView;
     private int currentBand = 3;
     private LinearLayout optLayout;
+    private android.widget.EditText apiBaseInput, apiKeyInput, apiModelInput;
+    private Button aiBtn;
     private int currentOpt = 0;
     private String currentAsset = null;
     private LinearLayout shopLayout;
@@ -85,6 +87,13 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, -2); bp.setMargins(0,20,0,12); refreshBtn.setLayoutParams(bp);
         root.addView(refreshBtn);
 
+        aiBtn = new Button(this);
+        aiBtn.setText("🤖  获取当日推荐（AI 大模型）");
+        aiBtn.setTextSize(16);
+        aiBtn.setOnClickListener(v -> fetchAiRecommendation());
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, -2); ap.setMargins(0,0,0,12); aiBtn.setLayoutParams(ap);
+        root.addView(aiBtn);
+
         statusView = new TextView(this); statusView.setText("正在准备…"); statusView.setTextSize(13); statusView.setTextColor(Color.parseColor("#888888")); root.addView(statusView);
 
         weatherView = makeCard(root, "今日天气");
@@ -108,6 +117,16 @@ public class MainActivity extends Activity {
         TextView sh = new TextView(this); sh.setText("\n🛒 淘宝搜同款（点开直达搜索结果）"); sh.setTextSize(18); sh.setTextColor(Color.parseColor("#E67E22")); root.addView(sh);
         TextView sn = new TextView(this); sn.setText("给的是带尺码的搜索链接，不是单个商品链接 — 单品链接容易失效/下架，搜索结果是实时在售的，照关键词+120码挑就行。"); sn.setTextSize(12); sn.setTextColor(Color.parseColor("#999999")); root.addView(sn);
         shopLayout = new LinearLayout(this); shopLayout.setOrientation(LinearLayout.VERTICAL); root.addView(shopLayout);
+
+        TextView ah = new TextView(this); ah.setText("\n⚙️ AI 模型设置（填一次保存，下次自动带出）"); ah.setTextSize(18); ah.setTextColor(Color.parseColor("#E67E22")); root.addView(ah);
+        TextView an = new TextView(this); an.setText("填 OpenAI 兼容接口：地址如 https://api.deepseek.com/v1 或 https://api.openai.com/v1；模型如 deepseek-chat / gpt-4o-mini。Key 只存在本机，不上传别处。"); an.setTextSize(12); an.setTextColor(Color.parseColor("#999999")); root.addView(an);
+        android.content.SharedPreferences cfg = getSharedPreferences("ai_cfg", MODE_PRIVATE);
+        apiBaseInput = new android.widget.EditText(this); apiBaseInput.setHint("接口地址，如 https://api.deepseek.com/v1"); apiBaseInput.setTextSize(14); apiBaseInput.setSingleLine(true); apiBaseInput.setText(cfg.getString("base", "")); root.addView(apiBaseInput);
+        apiKeyInput = new android.widget.EditText(this); apiKeyInput.setHint("API Key"); apiKeyInput.setTextSize(14); apiKeyInput.setSingleLine(true); apiKeyInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); apiKeyInput.setText(cfg.getString("key", "")); root.addView(apiKeyInput);
+        apiModelInput = new android.widget.EditText(this); apiModelInput.setHint("模型名，如 deepseek-chat"); apiModelInput.setTextSize(14); apiModelInput.setSingleLine(true); apiModelInput.setText(cfg.getString("model", "")); root.addView(apiModelInput);
+        Button saveCfg = new Button(this); saveCfg.setText("保存 AI 设置"); saveCfg.setTextSize(14);
+        saveCfg.setOnClickListener(v -> { cfg.edit().putString("base", apiBaseInput.getText().toString().trim()).putString("key", apiKeyInput.getText().toString().trim()).putString("model", apiModelInput.getText().toString().trim()).apply(); Toast.makeText(this, "AI 设置已保存", Toast.LENGTH_SHORT).show(); });
+        root.addView(saveCfg);
 
         TextView foot = new TextView(this);
         foot.setText("\n小原则：5岁孩子跑动多，一般比大人少穿一件或穿一样多就行；摸后背/后颈，温热不出汗就是刚好。\n天气数据：Open-Meteo（免费公开天气，无需注册）");
@@ -325,6 +344,110 @@ public class MainActivity extends Activity {
             });
             shopLayout.addView(btn);
         }
+    }
+
+    // ---------- AI recommendation ----------
+    private int bandOf(double day) {
+        if (day >= 28) return 0; if (day >= 23) return 1; if (day >= 18) return 2;
+        if (day >= 13) return 3; if (day >= 8) return 4; if (day >= 3) return 5; return 6;
+    }
+    private void fetchAiRecommendation() {
+        String base = apiBaseInput.getText().toString().trim();
+        String key = apiKeyInput.getText().toString().trim();
+        String model = apiModelInput.getText().toString().trim();
+        if (base.isEmpty() || key.isEmpty() || model.isEmpty()) {
+            Toast.makeText(this, "请先在页面下方「AI 模型设置」里填好接口地址、Key、模型名并保存", Toast.LENGTH_LONG).show();
+            return;
+        }
+        getSharedPreferences("ai_cfg", MODE_PRIVATE).edit().putString("base", base).putString("key", key).putString("model", model).apply();
+        int idx = citySpinner.getSelectedItemPosition();
+        aiBtn.setEnabled(false); statusView.setText("AI：正在获取天气并请求大模型…");
+        execHolder.e.execute(() -> {
+            try {
+                double lat, lon; String city;
+                if (idx == 0) {
+                    double[] loc = getLocation();
+                    if (loc == null) { lat = 31.23; lon = 121.47; city = "定位失败，暂用上海"; }
+                    else { lat = loc[0]; lon = loc[1]; city = "当前位置"; }
+                } else { lat = cityCoords[idx][0]; lon = cityCoords[idx][1]; city = cityNames[idx]; }
+                String wurl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+                    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m" +
+                    "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,wind_speed_10m_max" +
+                    "&timezone=auto&forecast_days=1";
+                org.json.JSONObject w = new org.json.JSONObject(httpGet(wurl));
+                org.json.JSONObject cur = w.getJSONObject("current");
+                org.json.JSONObject daily = w.getJSONObject("daily");
+                double tmax = daily.getJSONArray("temperature_2m_max").getDouble(0);
+                double tmin = daily.getJSONArray("temperature_2m_min").getDouble(0);
+                double rainP = daily.getJSONArray("precipitation_probability_max").optDouble(0, 0);
+                double uv = daily.getJSONArray("uv_index_max").optDouble(0, 0);
+                double wind = daily.getJSONArray("wind_speed_10m_max").optDouble(0, 0);
+                double now = cur.getDouble("temperature_2m");
+                double feels = cur.getDouble("apparent_temperature");
+                int band = bandOf(tmax);
+                boolean rainy = rainP >= 40;
+
+                String prompt = "今天是" + new java.text.SimpleDateFormat("yyyy年M月d日").format(new java.util.Date()) + "，城市：" + city + "。"
+                    + "天气：最高" + tmax + "°C，最低" + tmin + "°C，现在" + now + "°C，体感" + feels + "°C，降雨概率" + rainP + "%，最大风速" + wind + "km/h，紫外线指数" + uv + "。"
+                    + "孩子：2021年出生的女童，约5岁，身高约110cm，穿120码，鞋约28-29码，幼儿园在园、跑动多。"
+                    + "请结合当下最新流行的女童穿搭趋势（低饱和同色系、韩系/学院风等，不要红配橙这种撞色土味搭配），给出一套适合今天天气的完整穿衣推荐。"
+                    + "要求：从内衣开始由内到外共5-7件，每件给出具体颜色、款式、材质厚度和尺码，并给出带「女童」和尺码的淘宝搜索关键词。"
+                    + "只输出JSON，不要任何其他文字，格式：{\"name\":\"这套搭配的名字\",\"items\":[{\"label\":\"内衣\",\"spec\":\"具体描述\",\"keyword\":\"淘宝搜索关键词\"}]}";
+                org.json.JSONObject msg1 = new org.json.JSONObject(); msg1.put("role", "system"); msg1.put("content", "你是专业的儿童穿搭顾问，只输出JSON。");
+                org.json.JSONObject msg2 = new org.json.JSONObject(); msg2.put("role", "user"); msg2.put("content", prompt);
+                org.json.JSONArray msgs = new org.json.JSONArray(); msgs.put(msg1); msgs.put(msg2);
+                org.json.JSONObject body = new org.json.JSONObject(); body.put("model", model); body.put("messages", msgs); body.put("temperature", 0.7);
+
+                String chatUrl = base.endsWith("/chat/completions") ? base : (base.endsWith("/") ? base + "chat/completions" : base + "/chat/completions");
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(chatUrl).openConnection();
+                c.setRequestMethod("POST"); c.setConnectTimeout(15000); c.setReadTimeout(90000); c.setDoOutput(true);
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setRequestProperty("Authorization", "Bearer " + key);
+                byte[] bytes = body.toString().getBytes("UTF-8");
+                java.io.OutputStream os = c.getOutputStream(); os.write(bytes); os.close();
+                int code = c.getResponseCode();
+                java.io.InputStream is = code >= 200 && code < 300 ? c.getInputStream() : c.getErrorStream();
+                java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(is, "UTF-8"));
+                StringBuilder sb = new StringBuilder(); String line; while ((line = r.readLine()) != null) sb.append(line); r.close();
+                if (code < 200 || code >= 300) throw new Exception("模型接口返回 " + code + "：" + sb.toString().substring(0, Math.min(200, sb.length())));
+                org.json.JSONObject resp = new org.json.JSONObject(sb.toString());
+                String content = resp.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim();
+                if (content.startsWith("```")) { content = content.replaceAll("(?s)^```[a-zA-Z]*", "").replaceAll("```$", "").trim(); }
+                org.json.JSONObject ai = new org.json.JSONObject(content);
+                Option aop = new Option();
+                aop.name = "🤖 AI：" + ai.optString("name", "当日推荐");
+                aop.asset = "band" + band + ".jpg";
+                org.json.JSONArray arr = ai.getJSONArray("items");
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONObject o = arr.getJSONObject(i);
+                    aop.items.add(new Item(o.optString("label", "单品"), o.optString("spec", ""), o.optString("keyword", "")));
+                }
+                if (aop.items.isEmpty()) throw new Exception("模型没返回清单");
+                final Outfit outfit = outfitFor(tmax, rainy, uv, wind, tmin);
+                buildOptions(outfit);
+                outfit.options.add(aop);
+                outfit.summary = "AI 大模型按今日天气实时生成（模特图为同温度档示意，穿法以清单为准）";
+                final String wtext = city + " · 最高 " + Math.round(tmax) + "°C / 最低 " + Math.round(tmin) + "°C · 现在 " + now + "°C（体感 " + Math.round(feels) + "°C）· 降雨概率 " + Math.round(rainP) + "% · 风最大 " + Math.round(wind) + " km/h · 紫外线 " + uv;
+                runOnUiThread(() -> {
+                    weatherView.setText(wtext);
+                    applyOutfit(outfit);
+                    // rebuild option buttons to include the AI option
+                    optLayout.removeAllViews();
+                    for (int i = 0; i < outfit.options.size(); i++) {
+                        final int ii = i;
+                        Button b = new Button(this); b.setText("搭配" + (i + 1) + "：" + outfit.options.get(i).name); b.setTextSize(15); b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+                        b.setOnClickListener(v -> renderOption(ii)); optLayout.addView(b);
+                    }
+                    renderOption(outfit.options.size() - 1);
+                    adviceView.setText("这是 AI 大模型按今天天气实时生成的推荐（搭配" + outfit.options.size() + "），已内置的几套本地搭配也在列表里可切换。注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
+                    statusView.setText("AI 推荐已生成 · " + city);
+                    aiBtn.setEnabled(true);
+                });
+            } catch (Exception e) {
+                final String msg = e.getMessage() == null ? e.toString() : e.getMessage();
+                runOnUiThread(() -> { statusView.setText("AI 推荐失败：" + msg); aiBtn.setEnabled(true); Toast.makeText(this, "AI 推荐失败：" + msg, Toast.LENGTH_LONG).show(); });
+            }
+        });
     }
 
     // ---------- weather ----------
