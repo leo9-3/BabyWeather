@@ -100,12 +100,22 @@ public class MainActivity extends Activity {
 
         // ---- visual baby ----
         TextView vh = new TextView(this); vh.setText("\n今日造型（穿在宝宝身上就是这样）"); vh.setTextSize(18); vh.setTextColor(Color.parseColor("#E67E22")); root.addView(vh);
+        android.widget.FrameLayout photoFrame = new android.widget.FrameLayout(this);
+        LinearLayout.LayoutParams fp = new LinearLayout.LayoutParams(-1, -2); fp.setMargins(0,8,0,4); photoFrame.setLayoutParams(fp);
         photoView = new ImageView(this);
         photoView.setBackgroundColor(Color.WHITE);
         photoView.setScaleType(ImageView.ScaleType.FIT_CENTER);
         photoView.setAdjustViewBounds(true);
-        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(-1, 1100); vp.setMargins(0,8,0,4); photoView.setLayoutParams(vp);
-        root.addView(photoView);
+        photoView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1, 1100));
+        photoFrame.addView(photoView);
+        Button shuffleBtn = new Button(this);
+        shuffleBtn.setText("🔀 换一套");
+        shuffleBtn.setTextSize(14);
+        android.widget.FrameLayout.LayoutParams shp = new android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.TOP);
+        shp.setMargins(0, 16, 16, 0); shuffleBtn.setLayoutParams(shp);
+        shuffleBtn.setOnClickListener(v -> shuffleOption());
+        photoFrame.addView(shuffleBtn);
+        root.addView(photoFrame);
         TextView hint = new TextView(this); hint.setText("👆 点一下照片可以放大，放大后双指捏合缩放、拖动看细节（写实模特图）"); hint.setTextSize(13); hint.setTextColor(Color.parseColor("#888888")); hint.setGravity(Gravity.CENTER); root.addView(hint);
         photoView.setOnClickListener(v -> showZoom());
         TextView oh = new TextView(this); oh.setText("\n换一套（同温度多套搭配，点着切换）："); oh.setTextSize(15); oh.setTextColor(Color.parseColor("#E67E22")); root.addView(oh);
@@ -322,6 +332,14 @@ public class MainActivity extends Activity {
         }
         renderOption(0);
     }
+    private void shuffleOption() {
+        if (currentOutfit == null || currentOutfit.options.size() < 2) { Toast.makeText(this, "现在只有一套，没得换", Toast.LENGTH_SHORT).show(); return; }
+        java.util.Random rnd = new java.util.Random();
+        int pick = currentOpt; int guard = 0;
+        while (pick == currentOpt && guard++ < 20) pick = rnd.nextInt(currentOutfit.options.size());
+        renderOption(pick);
+        Toast.makeText(this, "随机换到：搭配" + (pick + 1) + " " + currentOutfit.options.get(pick).name, Toast.LENGTH_SHORT).show();
+    }
     private void renderOption(int idx) {
         if (currentOutfit == null || currentOutfit.options.isEmpty()) return;
         currentOpt = idx;
@@ -438,8 +456,9 @@ public class MainActivity extends Activity {
                         Button b = new Button(this); b.setText("搭配" + (i + 1) + "：" + outfit.options.get(i).name); b.setTextSize(15); b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
                         b.setOnClickListener(v -> renderOption(ii)); optLayout.addView(b);
                     }
-                    renderOption(outfit.options.size() - 1);
-                    adviceView.setText("这是 AI 大模型按今天天气实时生成的推荐（搭配" + outfit.options.size() + "），已内置的几套本地搭配也在列表里可切换。注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
+                    int pick = new java.util.Random().nextInt(outfit.options.size());
+                    renderOption(pick);
+                    adviceView.setText("AI 推荐是搭配" + outfit.options.size() + "（名字带🤖），加上本地素材库的 " + (outfit.options.size() - 1) + " 套，一共 " + outfit.options.size() + " 套备选。首屏是从中随机挑的一套展示，点照片右上角「🔀 换一套」可以随机换一套，下面的搭配按钮也能逐套看。注意：AI 内容由模型生成，出门前结合孩子实际冷热再微调。");
                     statusView.setText("AI 推荐已生成 · " + city);
                     aiBtn.setEnabled(true);
                 });
